@@ -1,0 +1,320 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@1,300;1,500;0,300&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+#root{
+  width:100%;min-height:700px;
+  background:radial-gradient(ellipse at 50% 0%, #1a0010 0%, #0d000a 60%, #000 100%);
+  display:flex;flex-direction:column;align-items:center;
+  padding:2rem 1rem 3rem;position:relative;overflow:hidden;
+  font-family:'Cormorant Garamond',Georgia,serif;
+}
+#stars-bg{position:absolute;inset:0;pointer-events:none;}
+#title-area{text-align:center;margin-bottom:1.5rem;z-index:2;}
+#title-area h1{
+  font-family:'Dancing Script',cursive;
+  font-size:2.4rem;color:#f9c0d0;letter-spacing:0.04em;line-height:1.2;
+}
+#title-area p{font-size:1rem;color:rgba(249,192,208,0.55);font-style:italic;margin-top:0.4rem;}
+#canvas-wrap{position:relative;width:320px;height:320px;z-index:3;}
+canvas#fc{position:absolute;top:0;left:0;pointer-events:none;}
+#svg-rose{position:absolute;top:0;left:0;width:320px;height:320px;}
+#hint{
+  font-size:0.85rem;color:rgba(249,192,208,0.5);font-style:italic;
+  margin-top:0.6rem;z-index:3;text-align:center;
+  transition:opacity 0.5s;
+}
+#reveal-zone{
+  min-height:130px;width:100%;max-width:500px;
+  display:flex;align-items:center;justify-content:center;
+  z-index:3;margin-top:0.5rem;
+}
+.rcard{
+  background:rgba(255,255,255,0.06);
+  border:0.5px solid rgba(249,192,208,0.25);
+  border-radius:18px;padding:1.4rem 1.8rem;
+  text-align:center;max-width:420px;width:100%;
+  animation:popIn 0.55s cubic-bezier(.175,.885,.32,1.275) forwards;
+  position:relative;
+}
+.rcard::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(to right,#c2407a,#f9c0d0,#c2407a);
+  border-radius:18px 18px 0 0;
+}
+.rem{font-size:2.6rem;display:block;margin-bottom:0.5rem;}
+.rtitle{
+  font-family:'Dancing Script',cursive;font-size:1.5rem;
+  color:#f9c0d0;margin-bottom:0.35rem;display:block;
+}
+.rtext{font-style:italic;font-size:1rem;color:rgba(249,192,208,0.75);line-height:1.65;}
+#counter{font-size:0.82rem;color:rgba(249,192,208,0.35);margin-top:0.8rem;font-style:italic;z-index:3;}
+#finale-msg{
+  display:none;text-align:center;z-index:3;
+  animation:popIn 0.7s ease forwards;
+  padding:0 1rem;
+}
+#finale-msg .big{
+  font-family:'Dancing Script',cursive;font-size:3rem;
+  color:#f9c0d0;display:block;margin-bottom:0.8rem;line-height:1.2;
+}
+#finale-msg p{color:rgba(249,192,208,0.65);font-style:italic;font-size:1.05rem;line-height:1.7;}
+@keyframes popIn{
+  from{opacity:0;transform:scale(0.65) translateY(18px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
+}
+@keyframes twinkle{0%,100%{opacity:0.2;}50%{opacity:1;}}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1) rotate(0deg);}100%{opacity:0;transform:translateY(-180px) scale(0.2) rotate(60deg);}}
+.spark{position:absolute;pointer-events:none;font-size:1.1rem;animation:floatUp 1.6s ease forwards;z-index:10;}
+</style>
+
+<div id="root">
+  <div id="stars-bg"></div>
+  <div id="title-area">
+    <h1>Je t'aime, Malak</h1>
+    <p>Arrache chaque pétale pour découvrir notre avenir ✨</p>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="fc" width="320" height="320"></canvas>
+    <svg id="svg-rose" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div id="hint">Clique sur un pétale 🌹</div>
+  <div id="reveal-zone"></div>
+  <div id="counter">8 pétales à arracher</div>
+  <div id="finale-msg"></div>
+</div>
+
+<script>
+const reveals=[
+  {e:'💍',t:'Notre mariage',x:'Je t\'imagine en blanc, marchant vers moi sous les étoiles. Ce jour-là, je serai l\'homme le plus heureux du monde, Malak.'},
+  {e:'🏠',t:'Notre maison',x:'Une maison rien qu\'à nous — où ta voix résonne dans chaque couloir, et où on se réveille ensemble chaque matin.'},
+  {e:'✈️',t:'Nos voyages',x:'De Fes à Paris, partout dans le monde main dans la main. Avec toi, même le trajet est une aventure.'},
+  {e:'🌙',t:'Nos nuits',x:'S\'endormir contre toi, sentir ta présence. C\'est tout ce dont j\'ai besoin pour être en paix.'},
+  {e:'👶',t:'Notre famille',x:'Un jour, entendre des petits rires courir dans notre maison. Avec toi comme maman, ils seront les plus chanceux.'},
+  {e:'🍽️',t:'Nos dimanches',x:'Des matins lents, du café, toi en face de moi. Ces moments ordinaires sont mes préférés.'},
+  {e:'🌟',t:'Mon éternité',x:'Je te choisis aujourd\'hui, demain, et tous les jours d\'après. Tu es mon chez-moi, Malak.'},
+  {e:'💗',t:'Pour toujours',x:'Chaque jour à tes côtés est un cadeau. Je t\'aime plus que les mots ne peuvent l\'exprimer.'},
+];
+
+const N=8;
+const cx=160,cy=145,PR=88,cR=38;
+
+const svg=document.getElementById('svg-rose');
+const revealZone=document.getElementById('reveal-zone');
+const counter=document.getElementById('counter');
+const hint=document.getElementById('hint');
+const finaleMsg=document.getElementById('finale-msg');
+const root=document.getElementById('root');
+
+let remaining=N;
+let petalEls=[];
+
+function petalPath(angle,r,h,w){
+  const rad=angle*Math.PI/180;
+  const ox=cx+Math.cos(rad)*r;
+  const oy=cy+Math.sin(rad)*r;
+  const tipX=cx+Math.cos(rad)*(r+h);
+  const tipY=cy+Math.sin(rad)*(r+h);
+  const perp=angle+90;
+  const pr=perp*Math.PI/180;
+  const c1x=ox+Math.cos(pr)*w+Math.cos(rad)*h*0.35;
+  const c1y=oy+Math.sin(pr)*w+Math.sin(rad)*h*0.35;
+  const c2x=ox-Math.cos(pr)*w+Math.cos(rad)*h*0.35;
+  const c2y=oy-Math.sin(pr)*w+Math.sin(rad)*h*0.35;
+  return `M ${ox.toFixed(1)} ${oy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${tipX.toFixed(1)} ${tipY.toFixed(1)}, ${tipX.toFixed(1)} ${tipY.toFixed(1)} C ${tipX.toFixed(1)} ${tipY.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ox.toFixed(1)} ${oy.toFixed(1)} Z`;
+}
+
+const baseColors=['#d4537e','#c2407a','#e06090','#be3870','#d85a85','#cc4878','#e07098','#c63875'];
+const hoverColors=['#ff80aa','#f06898','#ff90b8','#f058a0','#ff78b0','#f068a8','#ff88b8','#f04898'];
+
+function buildRose(){
+  svg.innerHTML='';
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  for(let i=0;i<N;i++){
+    const lg=document.createElementNS('http://www.w3.org/2000/svg','radialGradient');
+    lg.setAttribute('id','pg'+i);
+    lg.setAttribute('cx','50%');lg.setAttribute('cy','70%');lg.setAttribute('r','60%');
+    const s1=document.createElementNS('http://www.w3.org/2000/svg','stop');
+    s1.setAttribute('offset','0%');s1.setAttribute('stop-color','#fce8f0');
+    const s2=document.createElementNS('http://www.w3.org/2000/svg','stop');
+    s2.setAttribute('offset','100%');s2.setAttribute('stop-color',baseColors[i]);
+    lg.appendChild(s1);lg.appendChild(s2);
+    defs.appendChild(lg);
+  }
+  svg.appendChild(defs);
+
+  const stem=document.createElementNS('http://www.w3.org/2000/svg','path');
+  stem.setAttribute('d',`M ${cx} ${cy+cR+4} C ${cx-8} ${cy+cR+50}, ${cx+10} ${cy+cR+80}, ${cx} 310`);
+  stem.setAttribute('stroke','#4a8a38');stem.setAttribute('stroke-width','6');stem.setAttribute('fill','none');stem.setAttribute('stroke-linecap','round');
+  svg.appendChild(stem);
+
+  const ll=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  ll.setAttribute('cx',String(cx-20));ll.setAttribute('cy',String(cy+cR+60));
+  ll.setAttribute('rx','22');ll.setAttribute('ry','10');
+  ll.setAttribute('fill','#5a9e4a');ll.setAttribute('transform',`rotate(-40,${cx-20},${cy+cR+60})`);
+  svg.appendChild(ll);
+
+  const lr=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+  lr.setAttribute('cx',String(cx+20));lr.setAttribute('cy',String(cy+cR+80));
+  lr.setAttribute('rx','20');lr.setAttribute('ry','9');
+  lr.setAttribute('fill','#5a9e4a');lr.setAttribute('transform',`rotate(35,${cx+20},${cy+cR+80})`);
+  svg.appendChild(lr);
+
+  petalEls=[];
+  for(let i=0;i<N;i++){
+    const angle=(360/N)*i-90;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.style.cursor='pointer';
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',petalPath(angle,cR+4,PR,28));
+    p.setAttribute('fill',`url(#pg${i})`);
+    p.setAttribute('stroke','rgba(180,40,90,0.3)');
+    p.setAttribute('stroke-width','0.5');
+    g.appendChild(p);
+    g.addEventListener('mouseenter',()=>{ if(!g.dataset.gone){ p.setAttribute('fill',hoverColors[i]); g.style.transform=`scale(1.07)`; g.style.transformOrigin=`${cx}px ${cy}px`; }});
+    g.addEventListener('mouseleave',()=>{ if(!g.dataset.gone){ p.setAttribute('fill',`url(#pg${i})`); g.style.transform=''; }});
+    g.addEventListener('click',()=>pluck(g,p,i,angle));
+    svg.appendChild(g);
+    petalEls.push(g);
+  }
+
+  const glow=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  glow.setAttribute('cx',String(cx));glow.setAttribute('cy',String(cy));
+  glow.setAttribute('r',String(cR+6));glow.setAttribute('fill','rgba(255,180,210,0.15)');
+  svg.appendChild(glow);
+
+  const center2=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  center2.setAttribute('cx',String(cx));center2.setAttribute('cy',String(cy));
+  center2.setAttribute('r',String(cR));center2.setAttribute('fill','#f9e040');
+  svg.appendChild(center2);
+
+  const ct=document.createElementNS('http://www.w3.org/2000/svg','text');
+  ct.setAttribute('x',String(cx));ct.setAttribute('y',String(cy+5));
+  ct.setAttribute('text-anchor','middle');
+  ct.style.cssText='font-size:22px;font-family:serif;fill:#8b5a00;';
+  ct.textContent='♡';
+  svg.appendChild(ct);
+}
+
+function pluck(g,p,idx,angle){
+  if(g.dataset.gone) return;
+  g.dataset.gone='1';
+  remaining--;
+  spawnSparks(g,angle);
+
+  const rad=angle*Math.PI/180;
+  const flyX=(Math.cos(rad)*250);
+  const flyY=(Math.sin(rad)*250)-80;
+  const dur=900;
+  let start=null;
+  function anim(ts){
+    if(!start) start=ts;
+    const t=Math.min((ts-start)/dur,1);
+    const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    g.style.opacity=String(1-ease);
+    g.style.transform=`translate(${flyX*ease}px,${flyY*ease}px) rotate(${ease*120}deg)`;
+    g.style.transformOrigin=`${cx}px ${cy}px`;
+    if(t<1) requestAnimationFrame(anim);
+    else g.style.display='none';
+  }
+  requestAnimationFrame(anim);
+
+  setTimeout(()=>{
+    showReveal(idx);
+    const left=remaining;
+    if(left===0){
+      setTimeout(showFinale,900);
+      counter.style.display='none';
+    } else {
+      counter.textContent=`${left} pétale${left>1?'s':''} restant${left>1?'s':''}`;
+    }
+    if(left===7) hint.style.opacity='0';
+  },350);
+}
+
+function showReveal(idx){
+  const r=reveals[idx];
+  revealZone.innerHTML='';
+  const card=document.createElement('div');
+  card.className='rcard';
+  card.innerHTML=`<span class="rem">${r.e}</span><span class="rtitle">${r.t}</span><p class="rtext">${r.x}</p>`;
+  revealZone.appendChild(card);
+}
+
+function spawnSparks(g,angle){
+  const rect=g.getBoundingClientRect();
+  const rootRect=root.getBoundingClientRect();
+  const bx=rect.left-rootRect.left+rect.width/2;
+  const by=rect.top-rootRect.top+rect.height/2;
+  const emjs=['✨','💗','🌸','💕','⭐','🌹','💖'];
+  for(let i=0;i<7;i++){
+    const s=document.createElement('div');
+    s.className='spark';
+    s.textContent=emjs[Math.floor(Math.random()*emjs.length)];
+    s.style.left=(bx+(Math.random()-0.5)*70)+'px';
+    s.style.top=(by+(Math.random()-0.5)*50)+'px';
+    s.style.animationDelay=(Math.random()*0.3)+'s';
+    root.appendChild(s);
+    setTimeout(()=>s.remove(),2000);
+  }
+}
+
+function showFinale(){
+  revealZone.style.display='none';
+  hint.style.display='none';
+  finaleMsg.style.display='block';
+  finaleMsg.innerHTML=`<span class="big">Je t'aime Malak,<br>pour toujours ♡</span><p>Tu viens d'arracher chaque pétale...<br>et chacun était une promesse que je te fais<br>de tout mon cœur.</p>`;
+  launchFireworks();
+}
+
+function launchFireworks(){
+  const cvs=document.getElementById('fc');
+  const ctx=cvs.getContext('2d');
+  const particles=[];
+  const colors2=['#f9c0d0','#f07090','#ffd700','#e8a0b0','#ffffff','#ffaacc'];
+  function Particle(x,y){
+    this.x=x;this.y=y;
+    const spd=2+Math.random()*4;
+    const dir=Math.random()*Math.PI*2;
+    this.vx=Math.cos(dir)*spd;this.vy=Math.sin(dir)*spd;
+    this.alpha=1;this.color=colors2[Math.floor(Math.random()*colors2.length)];
+    this.r=1.5+Math.random()*2.5;
+  }
+  function burst(x,y){
+    for(let i=0;i<40;i++) particles.push(new Particle(x,y));
+  }
+  let t=0;
+  function loop(){
+    ctx.clearRect(0,0,320,320);
+    if(t%30===0&&t<300){
+      burst(60+Math.random()*200,40+Math.random()*180);
+    }
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.06;p.alpha-=0.018;
+      if(p.alpha<=0){particles.splice(i,1);continue;}
+      ctx.globalAlpha=p.alpha;ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    t++;
+    if(t<400||particles.length>0) requestAnimationFrame(loop);
+  }
+  setTimeout(loop,200);
+}
+
+function buildStars(){
+  const sb=document.getElementById('stars-bg');
+  for(let i=0;i<90;i++){
+    const s=document.createElement('div');
+    const sz=Math.random()*2+0.5;
+    s.style.cssText=`position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:white;left:${Math.random()*100}%;top:${Math.random()*100}%;animation:twinkle ${2+Math.random()*3}s ${Math.random()*3}s ease-in-out infinite;`;
+    sb.appendChild(s);
+  }
+}
+
+buildStars();
+buildRose();
+</script>
